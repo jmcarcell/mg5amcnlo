@@ -17,6 +17,7 @@ from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
 from six.moves import zip
 import six
+from itertools import permutations #ONIA
 from madgraph.core import base_objects
 """Methods and classes to export matrix elements to v4 format."""
 
@@ -37,6 +38,7 @@ import sys
 import time
 import traceback
 import  collections
+import random #ONIA
 
 import aloha
 
@@ -852,10 +854,23 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        # ONIA
+        # ad hoc
+        #h nexternal = nexternal-1
 
         lines = []
         for iproc, proc in enumerate(matrix_element.get('processes')):
             legs = proc.get_legs_with_decays()
+            # ONIA
+            # ad hoc
+            #h pdgids = [str(l.get('id')) for l in legs]
+            #h pdgids.pop(2)
+            #h pdgids.pop(2)
+            #h pdgids.insert(2,"443") # 443 is PDG id of J/psi
+            #h pdgids = ",".join(pdgids)
+            #h lines.append("DATA (IDUP(i,%d,%d),i=1,%d)/%s/" % \
+            #h             (iproc + 1, numproc+1, nexternal, pdgids))
+            #comment below three lines for colour projector fix
             lines.append("DATA (IDUP(i,%d,%d),i=1,%d)/%s/" % \
                          (iproc + 1, numproc+1, nexternal,
                           ",".join([str(l.get('id')) for l in legs])))
@@ -890,6 +905,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
                         for i in [0, 1]:
+                            # ONIA
+                            # ad hoc
+                            #h colorflow=["%3r" % color_flow_dict[j][i] \
+                            #h                for j in range(1,nexternal+1)]
+                            #h colorflow=",".join(colorflow)
+                            #h lines.append("DATA (ICOLUP(%d,i,%d,%d),i=1,%2r)/%s/" % \
+                            #h            (i + 1, cf_i + 1, numproc+1, nexternal, colorflow))
+                            #comment below for colour projector fix
                             lines.append("DATA (ICOLUP(%d,i,%d,%d),i=1,%2r)/%s/" % \
                                  (i + 1, cf_i + 1, numproc+1, nexternal,
                                   ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
@@ -1026,29 +1049,105 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         return"\n".join([ "C " + process.nice_string().replace('\n', '\nC * ') \
                          for process in matrix_element.get('processes')])
 
+    def transform(self,lst):
+        new_lst = lst[0:2]  # Copy the first two elements                                                                                                   
+        new_lst.extend([1 if x == 1 else -1 if x == -1 else 0 for x in lst[2:]])  # Transform the last four elements                                        
+        return new_lst
 
+    def count_elements(self,arr):
+        count = 0
+        for item in arr:
+            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], tuple) and len(item[0]) == 2 and isinstance(item[1], int):
+                count += 1
+        return count
+    
+    #ONIA
     def get_helicity_lines(self, matrix_element,array_name='NHEL', add_nb_comb=False):
         """Return the Helicity matrix definition lines for this matrix element"""
 
         helicity_line_list = []
-        i = 0            
+        input_array = ['n','j', 'j', 'g'] #j:[-1,0,1], n:[0],g:[-1,1]
+        #pid_array = [((3,4),0),((5,6),1),1]
+        #pid_array = [((3,4),0),0] #ONIA array of form [ ( ( x, y ), z ), ..,  w] where x,y label heavy quark external legs, z the spin (vec/pseudoscal) and w the number of associated particles
+        i = 0          
         if add_nb_comb:
             spins = matrix_element.get_spin_state()
             spins.insert(0, len(spins))
             helicity_line_list.append(\
                 ("DATA ("+array_name+"(I,0),I=1,%d) /" + \
                  ",".join(['%2r'] * (len(spins)-1)) + "/") % tuple(spins))
-            
-        for helicities in matrix_element.get_helicity_matrix():
+        #ONIA print(matrix_element.get_helicity_matrix)
+        #print(matrix_element.get_helicity_matrix())
+        #print(type(matrix_element.get_helicity_matrix()))
+        print("-----------------------------")
+        x =  list(itertools.product([-1,1],repeat = 1))
+        #print(x)
+
+        #count = self.count_elements(pid_array)
+        #print("Number of elements of the form {(x,y),z}:", count)
+        #print(pid_array[0], pid_array[0][0], pid_array[0][1], pid_array[1])
+        new_list = []
+        for value in x:
+            for m in [-1,1]:
+                new_list.append(tuple(list(value)+[m]))
+
+        for input_value in input_array:
+            x=new_list
+            if input_value=='j':
+                new_list=[]
+                for value in x:
+                    for m in [-1,0,1]:
+                        new_list.append(tuple(list(value)+[m]))
+            elif input_value=='g':
+                new_list=[]
+                for value in x:
+                    for m in [-1,1]:
+                        new_list.append(tuple(list(value)+[m]))
+            elif input_value=='n':
+                new_list=[]
+                for value in x:
+                    for m in [0]:
+                        new_list.append(tuple(list(value)+[m]))
+            else:
+                print("Please enter a correct input array!")
+        #print(new_list)
+        #print("***************")
+        #print(new_list)
+        for helicities in new_list:#matrix_element.get_helicity_matrix():
+            #print("-----------------------------")
+            #print("-----------------------------")
+            #print("---------+++++--------------------")
+            #print(helicities)
+            #print(type(helicities))
+            #print("-----------------------------")
+            #print("-----------------------------")
+            #print("-----------------------------")
+            #print("-----------------------------")
             i = i + 1
+            #int_list = [[i, len(helicities)] + list(helicities)]
             int_list = [i, len(helicities)]
             int_list.extend(helicities)
-            helicity_line_list.append(\
-                ("DATA ("+array_name+"(I,%4r),I=1,%d) /" + \
-                 ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
-
+            #for first_element in [1, -1]:
+            #    for second_element in [1, -1]:
+            #        for third_element in [-1, 1, 0]:
+                # Append the combination to int_list
+            #            int_list.append([i, len(helicities)-1,first_element, second_element, third_element])
+            int_full = int_list
+            #print(int_full)
+            #transformed_data = [self.transform(sublist) for sublist in int_full]
+            #for sublist in transformed_data:
+            #    print(transformed_data)
+            #if  helicities[3] != 0:
+            #     helicities = helicities[:-1] + (0,)
+            helicity_line_list.append(("DATA ("+array_name+"(I,%4r),I=1,%d) /" + ",".join(['%4r'] * len(helicities)) + "/") % tuple(int_list))
+            #helicity_line_list.append(\
+            #     ("DATA ("+array_name+"(I,%4r),I=1,%d) /" + \
+            #     ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
+            print("++++++++++++++++++++")
+            print(helicity_line_list)
+            print("\n".join(helicity_line_list))
         return "\n".join(helicity_line_list)
-
+    
     def get_ic_line(self, matrix_element):
         """Return the IC definition line coming after helicities, required by
         switchmom in madevent"""
@@ -1989,7 +2088,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 return '-imag1*'
             else:
                 return '-'
-
+        print(total_coeff)
+        #stop
         res_str = '%+iD0' % total_coeff.numerator
 
         if total_coeff.denominator != 1:
