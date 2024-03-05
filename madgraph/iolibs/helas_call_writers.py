@@ -50,7 +50,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
     # Dictionaries used for automatic generation of Helas calls
     # Dictionaries from spin states to letters in Helas call
     mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR',
-                   99:'P'}
+                   99:'P', 10000: 'ONIA_O', -10000: 'ONIA_I'} #ONIA
     
     @staticmethod
     def customize_argument_for_all_other_helas_object(call, arg):
@@ -275,22 +275,22 @@ class HelasCallWriter(base_objects.PhysicsObject):
             leg1 = item[0][0]
             leg2 = item[0][1]
 
-            momentum_leg1 = index #matrix_element.get_momentum(leg1) //apparantly get_momentum is not in matrix_element 
-            momentum_leg2 = index #matrix_element.get_momentum(leg2)
+            #momentum_leg1 = P(0:3,item[0][0]) #matrix_element.get_momentum(leg1) //apparantly get_momentum is not in matrix_element 
+            #momentum_leg2 = P(0:3,item[0][1]) #matrix_element.get_momentum(leg2)
             mass_leg1 = index #here put mass of leg1
             mass_leg2 = index #here put mass of leg2
             
-            momenta.append(momentum_leg1)
-            momenta.append(momentum_leg2)
+            #momenta.append(momentum_leg1)
+            #momenta.append(momentum_leg2)
             
-            Ponia_index = momentum_leg1 + momentum_leg2
+            #Ponia_index = momentum_leg1 + momentum_leg2
             Monia_index = mass_leg1 + mass_leg2
          
             #print(f"Ponia_{index}")
             #print(Ponia_index)
             #Ponia_index(0:3) = matrix_element.get_momentum(item[0][0]) +
-            call_onia = "CALL ONIA_OXXXXX(P(0,{}), mass_leg1, Ponia_{}(0), Monia_{}, NHEL({}), W(1,{}))".format(item[0][0], index, index, item[0][0], item[0][0])
-            call_oniy = "CALL ONIA_IXXXXX(P(0,{}), mass_leg2, Ponia_{}(0), Monia_{}, {}, NHEL({}), NHEL({}), W(1,{}))".format(item[0][1], index, index, item[1], item[0][0], item[0][1], item[0][1])
+            call_onia = "CALL ONIA_OXXXXX(P(0,{}), mass_{}, Ponia_{}(0), Monia_{}, NHEL({}), W(1,{}))".format(item[0][0],index, index, index, item[0][0], item[0][0])
+            call_oniy = "CALL ONIA_IXXXXX(P(0,{}), mass_{}, Ponia_{}(0), Monia_{}, {}, NHEL({}), NHEL({}), W(1,{}))".format(item[0][1],index, index, index, item[1], item[0][0], item[0][1], item[0][1])
             newres1 =   "{}\n{}".format(call_onia, call_oniy)
             newres.append(newres1)
             
@@ -1193,6 +1193,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             # Fill out with X up to 6 positions
             call = call + 'X' * (11 - len(call))
             call = call + "(P(0,%(number_external)d),"
+                
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "%(mass)s,NHEL(%(number_external)d),"
@@ -1202,6 +1203,30 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call_function = lambda wf: call % wf.get_external_helas_call_dict()
         self.add_wavefunction(argument.get_call_key(), call_function)
 
+    # ONIA
+    def generate_onia_wavefunction(self, argument):
+        """ Generate an external onia wavefunction """
+
+        call="CALL "
+        call1 = "CALL ONIA_I"
+        call2 = "CALL ONIA_O"
+
+        pid_numbers = [((3, 4), 1), ((5, 6), 1)] #particle id. and spin                                                                                                    
+            # mg5 knows about the open cc~ or bb~. Maybe just implement for loop here and no need for changing the mother_dict? but need to tell mg5 not to print out default spinors for outgoing quarks
+        if argument.get('spin') == 10000:
+                MONIA = 2.*(mass)
+                call = call + "%(mass)s,PONIA(0),%(MONIA)s,NHEL(%(number_external)d),"
+                call = call + "({0})".format(\
+                                    self.format_helas_object('W(1,','%(me_id)d'))
+                call1 = call1 + 'X' * (11 - len(call))
+                call1 = call1 + "(P(0,(%(number_external)d+1.)),"
+                call1 = call1 + "%(mass)s,PONIA(0),%(MONIA)s,%(spin)s,NHEL(%(number_external)d),NHEL((%(number_external)d+1.)),"
+                call1 = call1 + "({0})".format(\
+                                    self.format_helas_object('W(1,','%((me_id)d+1.)'))
+                #if argument.get('spin') == 10001:
+                # MONIA = 2.*(mass)                                                                                                                                                            # call = call + "%(mass)s,PONIA(0),%(MONIA)s,NHEL(%(number_external)d),"                                                                                                       # call = call + "({0})".format(\                                                                                                                               
+                #                        self.format_helas_object('W(1,','%(me_id)d'))                                                                                                         # call1 = call1 + 'X' * (11 - len(call))                                                                                                                                       # call1 = call1 + "(P(0,(%(number_external)d+1.)),"                                                                                                                            # call1 = call1 + "%(mass)s,PONIA(0),%(MONIA)s,%(spin)s,NHEL(%(number_external)d),NHEL((%(number_external)d+1.)),"                                                             # call1 = call1 + "({0})".format(\                                                                                                                                             #                        self.format_helas_object('W(1,','%((me_id)d+1.)'))                                                                                             
+      # end ONIA          
     def generate_all_other_helas_objects(self,argument):
         """ Generate all the helas objects for which no special handlers was
         placed in generate_helas_call """
