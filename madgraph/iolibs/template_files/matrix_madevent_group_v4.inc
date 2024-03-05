@@ -31,7 +31,16 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+    REAL*8 MASS_0, MASS_1
+    REAL*8 MONIA_0, MONIA_1
+    REAL*8 PONIA_0(0)
+    REAL*8 PONIA_1(0)
 c
+c ONIA compute PONIA and MONIA
+    PONIA_0(0) = P(0,3) + P(0,4)
+    PONIA_1(0) = P(0,5) + P(0,6)
+    MONIA_0 = MASS_0 + MASS_0
+    MONIA_1 = MASS_1 + MASS_1
 c global (due to reading writting) 
 c
         LOGICAL GOODHEL(NCOMB,2)
